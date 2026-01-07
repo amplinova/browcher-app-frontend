@@ -1,6 +1,37 @@
+import { useEffect, useState } from "react";
 import { FiUsers, FiBox, FiLayers, FiCpu, FiTrendingUp } from "react-icons/fi";
+import api from "../api/axios";
 
 const Dashboard = () => {
+
+  const [dashboard, setDashboard] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+        const res = await api.get("dashboard/");
+        setDashboard(res.data);
+      } catch (error) {
+        console.error("Failed to load dashboard data", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboard();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-lg font-semibold text-gray-600">
+          Loading dashboard...
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-300 p-6 space-y-10">
 
@@ -11,12 +42,27 @@ const Dashboard = () => {
 
       {/* TOP CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full">
-        <StatCard title="No of Clients" value="12" color="blue" icon={<FiUsers />} />
-        <StatCard title="No of Products" value="6" color="green" icon={<FiBox />} />
-        <StatCard title="Ongoing Projects" value="6" color="purple" icon={<FiLayers />} />
+        <StatCard
+          title="No of Clients"
+          value={dashboard?.clients ?? 0}
+          color="blue"
+          icon={<FiUsers />}
+        />
+        <StatCard
+          title="No of Products"
+          value={dashboard?.products ?? 0}
+          color="green"
+          icon={<FiBox />}
+        />
+        <StatCard
+          title="Ongoing Projects"
+          value={dashboard?.ongoing_projects ?? 0}
+          color="purple"
+          icon={<FiLayers />}
+        />
       </div>
 
-      {/* Our Team Title */}
+      {/* OUR TEAM TITLE */}
       <h1 className="text-2xl font-bold text-gray-900">
         Our Team
       </h1>
@@ -25,38 +71,37 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full">
         <StatCard
           title="IT"
-          value="25"
+          value={dashboard?.team?.it ?? 0}
           color="indigo"
           icon={<FiCpu />}
         />
         <StatCard
           title="Digital Marketing"
-          value="15"
+          value={dashboard?.team?.digital_marketing ?? 0}
           color="purple"
           icon={<FiTrendingUp />}
         />
         <StatCard
           title="Sales"
-          value="10"
+          value={dashboard?.team?.sales ?? 0}
           color="amber"
           icon={<FiUsers />}
         />
-      </div> 
-
+      </div>
 
     </div>
   );
 };
 
 
-/* REUSABLE CARD */
+/* ================= REUSABLE CARD ================= */
 const StatCard = ({ title, value, icon, color }) => {
   const colors = {
     blue: "bg-blue-100 text-blue-600",
     green: "bg-green-100 text-green-600",
     indigo: "bg-indigo-100 text-indigo-600",
     purple: "bg-purple-100 text-purple-600",
-    amber: "bg-amber-100 text-amber-600", 
+    amber: "bg-amber-100 text-amber-600",
   };
 
   return (

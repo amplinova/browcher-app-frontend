@@ -1,54 +1,35 @@
-import React, { useState } from "react";
-
-/* ===================== JSON DATA ===================== */
-const restaurantData = {
-  "id": "bhagayath-bawarchi",
-  "title": "Bhagayath Bawarchi Restaurant",
-  "logo": "/restaurant.png",
-
-  "details": {
-    "duration": "3 Weeks",
-    "category": "Dynamic Website",
-    "domain": "Restaurant",
-    "website": {
-      "url": "https://restaurant-frontend-gilt-chi.vercel.app/",
-      "label": "Visit Website"
-    }
-  },
-
-  "description": {
-    "heading": "Project Description",
-    "points": [
-      "Full-stack restaurant menu management system",
-      "Django REST APIs for categories and menu items",
-      "React-based dynamic UI with filters and subcategories",
-      "Veg / Non-Veg filtering support",
-      "Scalable and easy-to-update architecture"
-    ]
-  },
-
-  "media": {
-    "images": [
-      "/rest-1.png",
-      "/rest-2.png",
-      "/rest-3.png",
-      "/rest-4.png",
-      "/rest-5.png",
-      "/rest-6.png"
-    ],
-    "video": {
-      "src": "/rest.mp4",
-      "type": "video/mp4"
-    }
-  }
-};
+import React, { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
+import api from "../../api/axios";
 
 /* ===================== COMPONENT ===================== */
 const Restaurant = () => {
-  const { title, logo, details, description, media } = restaurantData;
-  const { images, video } = media;
+  const { slug } = useParams(); // 👈 from route
 
+  const [product, setProduct] = useState(null);
   const [current, setCurrent] = useState(0);
+
+  useEffect(() => {
+    api.get(`products/${slug}/`)
+      .then(res => setProduct(res.data))
+      .catch(err => console.error(err));
+  }, [slug]);
+
+  if (!product) return <p className="text-center">Loading...</p>;
+
+  const { title, logo} = product;
+  const description = product.description || {
+  heading: "",
+  points: []
+  };
+  const details = product.details || {
+  duration: "",
+  category: "",
+  domain: "",
+  website: { url: "", label: "" }
+  };
+  const media = product.media || { images: [], video: {} };
+  const { images, video } = media;
 
   const prevSlide = () => {
     setCurrent(current === 0 ? images.length - 1 : current - 1);
@@ -64,7 +45,7 @@ const Restaurant = () => {
       {/* TITLE & LOGO */}
       <div className="flex items-center gap-6">
         <img
-          src={logo}
+          src={`http://127.0.0.1:8000${logo}`}
           alt={title}
           className="w-24 h-24 rounded-xl object-contain"
         />
@@ -118,7 +99,7 @@ const Restaurant = () => {
 
         <div className="relative max-w-4xl mx-auto">
           <img
-            src={images[current]}
+            src={`http://127.0.0.1:8000${images[current]}`}
             alt={`Screenshot ${current + 1}`}
             className="rounded-xl shadow-lg w-full transition-all duration-500"
           />
@@ -164,7 +145,10 @@ const Restaurant = () => {
 
         <div className="aspect-video rounded-xl overflow-hidden max-w-3xl mx-auto bg-black">
           <video className="w-full h-full object-cover" controls>
-            <source src={video.src} type={video.type} />
+            <source
+              src={`http://127.0.0.1:8000${video.src}`}
+              type={video.type}
+            />
             Your browser does not support the video tag.
           </video>
         </div>

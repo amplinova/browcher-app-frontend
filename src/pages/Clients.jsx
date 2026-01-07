@@ -1,25 +1,12 @@
-import { useState } from "react";
+import { useState,useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import api from "../api/axios";
 
 const Clients = () => {
   const [showForm, setShowForm] = useState(false);
 
   /* ================= PRODUCTS STATE ================= */
   const [clients, setClients] = useState([
-    {
-      logo: "/restaurant.png",
-      title: "Bhagayath Bawarchi",
-      category: "Restaurant",
-      link: "/ourProducts/restaurant",
-      status: "live",
-    },
-    {
-      logo: "/client2.jpg",
-      title: "TravelGo",
-      category: "Travel & Tourism",
-      link: "/project/travelgo",
-      status: "ongoing",
-    },
   ]);
 
   /* ================= FORM STATE ================= */
@@ -30,11 +17,13 @@ const Clients = () => {
     category: "",
     domain: "",
     link: "",
-    description: "",
-    images: [],          // multiple
-    video: "",
+    description: [""],
+    images: [],        
+    video: null,
     status: "live",
   });
+
+  const [videoPreview, setVideoPreview] = useState(null);
 
   /* ================= HANDLE INPUT ================= */
   const handleChange = (e) => {
@@ -54,29 +43,79 @@ const Clients = () => {
       logo: e.target.files[0],
     });
   };
+ 
+  /* ================= DESCRIPTION HANDLERS ================= */
+  const handleDescriptionChange = (index, value) => {
+    const updated = [...formData.description];
+    updated[index] = value;
+    setFormData({ ...formData, description: updated });
+  };
+
+  const addDescriptionPoint = () => {
+    setFormData({
+      ...formData,
+      description: [...formData.description, ""],
+    });
+  };
+
+  const removeDescriptionPoint = (index) => {
+    const updated = formData.description.filter((_, i) => i !== index);
+    setFormData({ ...formData, description: updated });
+  };
+
+  /* ================= VIDEO ================= */
+  const handleVideoChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setFormData({ ...formData, video: file });
+    setVideoPreview(URL.createObjectURL(file));
+  };
 
 
   /* ================= SAVE PRODUCT ================= */
-  const handleSave = () => {
-    if (!formData.title || !formData.category) return;
+  const handleSave = async () => {
+  if (!formData.title || !formData.category) return;
 
-    const imageUrls = formData.images.map((img) =>
-      URL.createObjectURL(img)
-    );
+  try {
+    const data = new FormData();
 
-    const logoUrl = formData.logo
-      ? URL.createObjectURL(formData.logo)
-      : "";
+    data.append("title", formData.title);
+    data.append("duration", formData.duration);
+    data.append("category", formData.category);
+    data.append("domain", formData.domain);
+    data.append("link", formData.link);
+    data.append("status", formData.status);
 
-    setClients([
-      ...clients,
-      {
-        ...formData,
-        logo: logoUrl,
-        images: imageUrls,
-      },
-    ]);
+    if (formData.logo) {
+      data.append("logo", formData.logo);
+    }
 
+    // description bullets
+    formData.description.forEach(point => {
+      data.append("description", point);
+    });
+
+    // multiple images
+    formData.images.forEach(img => {
+      data.append("images", img);
+    });
+
+    // video
+    if (formData.video) {
+      data.append("video", formData.video);
+    }
+
+    // ✅ POST to backend
+    await api.post("clients/", data, {
+      headers: { "Content-Type": "multipart/form-data" }
+    });
+
+    // ✅ re-fetch from backend (THIS is why refresh works)
+    const res = await api.get("clients/");
+    setClients(res.data);
+
+    // reset form
     setFormData({
       logo: null,
       title: "",
@@ -84,14 +123,26 @@ const Clients = () => {
       category: "",
       domain: "",
       link: "",
-      description: "",
+      description: [""],
       images: [],
-      video: "",
+      video: null,
       status: "live",
     });
 
+    setVideoPreview(null);
     setShowForm(false);
-  };
+
+  } catch (err) {
+    console.error("Client save failed:", err);
+  }
+};
+
+
+   useEffect(() => {
+   api.get("clients/")
+    .then(res => setClients(res.data))
+    .catch(err => console.error(err));
+}, []);
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-10">
@@ -102,12 +153,12 @@ const Clients = () => {
           Our Clients
         </h2>
 
-        <button
+        {/* <button
           onClick={() => setShowForm(!showForm)}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
         >
           + Add Product
-        </button>
+        </button> */}
       </div>
 
       {/* ADD PRODUCT FORM */}
@@ -147,18 +198,39 @@ const Clients = () => {
             <Input label="Domain" name="domain" value={formData.domain} onChange={handleChange} />
             <Input label="Website Link" name="link" value={formData.link} onChange={handleChange} />
 
-            {/* DESCRIPTION (RESPONSIVE) */}
+               {/* DESCRIPTION BULLETS */}
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Description
-              </label>
-              <textarea
-                name="description"
-                rows="4"
-                value={formData.description}
-                onChange={handleChange}
-                className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              <label className="block text-sm font-medium mb-2">Description Points</label>
+
+              {formData.description.map((point, index) => (
+                <div key={index} className="flex gap-2 mb-2">
+                  <input
+                    value={point}
+                    onChange={(e) =>
+                      handleDescriptionChange(index, e.target.value)
+                    }
+                    placeholder={`Point ${index + 1}`}
+                    className="flex-1 border rounded px-3 py-2"
+                  />
+                  {formData.description.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeDescriptionPoint(index)}
+                      className="text-red-500"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={addDescriptionPoint}
+                className="text-blue-600 text-sm"
+              >
+                + Add point
+              </button>
             </div>
 
             {/* IMAGES (RESPONSIVE FILE INPUT) */}
@@ -190,12 +262,19 @@ const Clients = () => {
             </div>
 
             {/* VIDEO */}
-            <Input
-              label="Video Preview (YouTube URL)"
-              name="video"
-              value={formData.video}
-              onChange={handleChange}
-            />
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-1">Video Upload</label>
+              <input type="file" accept="video/*" onChange={handleVideoChange} />
+
+              {videoPreview && (
+                <video
+                  src={videoPreview}
+                  controls
+                  className="mt-3 w-full h-56 rounded-lg object-cover"
+                />
+              )}
+            </div>
+
 
             {/* STATUS */}
             <div>
@@ -214,9 +293,9 @@ const Clients = () => {
             </div>
           </div>
 
+              {/* Save */}
           <div className="flex gap-4 mt-6">
-            <button
-              onClick={handleSave}
+            <button onClick={handleSave}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
             >
               Save Product
@@ -258,7 +337,7 @@ const Input = ({ label, name, value, onChange }) => (
 );
 
 /* ================= PROJECT CARD ================= */
-const ProjectCard = ({ logo, title, category, link, status }) => {
+const ProjectCard = ({ logo, title, category, domain, status,slug }) => {
   const navigate = useNavigate();
 
   const statusStyles = {
@@ -275,18 +354,22 @@ const ProjectCard = ({ logo, title, category, link, status }) => {
         {status === "live" ? "Live" : "Ongoing"}
       </span>
 
-      <img src={logo} alt={title} className="h-24 w-auto object-contain mb-4" />
+      <img src={`http://127.0.0.1:8000${logo}`} alt={title} className="h-24 w-auto object-contain mb-4" />
 
       <h3 className="text-lg font-semibold text-gray-800">
         {title}
       </h3>
 
-      <p className="text-sm text-gray-500 mb-4">
-        {category}
-      </p>
-
+       <div className="mt-1 mb-3">
+        <p className="text-sm text-gray-500 capitalize">
+          {category}
+        </p>
+        <p className="text-sm text-gray-500 capitalize">
+          {domain}
+        </p>
+      </div>
       <button
-        onClick={() => navigate(link)}
+        onClick={() => navigate(`/clients/${slug}`)}
         className="text-blue-600 text-sm font-medium hover:underline"
       >
         View Project →

@@ -1,26 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import api from "../api/axios";
 
 const Products = () => {
   const [showForm, setShowForm] = useState(false);
 
   /* ================= PRODUCTS STATE ================= */
-  const [products, setProducts] = useState([
-    {
-      logo: "/restaurant.png",
-      title: "Bhagayath Bawarchi",
-      category: "Restaurant",
-      link: "/ourProducts/restaurant",
-      status: "live",
-    },
-    {
-      logo: "/client2.jpg",
-      title: "TravelGo",
-      category: "Travel & Tourism",
-      link: "/project/travelgo",
-      status: "ongoing",
-    },
-  ]);
+  const [products, setProducts] = useState([]);
 
   /* ================= FORM STATE ================= */
   const [formData, setFormData] = useState({
@@ -30,11 +16,13 @@ const Products = () => {
     category: "",
     domain: "",
     link: "",
-    description: "",
-    images: [],          // multiple
-    video: "",
+    description: [""],
+    images: [],
+    video: null,
     status: "live",
   });
+
+  const [videoPreview, setVideoPreview] = useState(null);
 
   /* ================= HANDLE INPUT ================= */
   const handleChange = (e) => {
@@ -42,81 +30,132 @@ const Products = () => {
   };
 
   const handleImagesChange = (e) => {
-    setFormData({
-      ...formData,
-      images: Array.from(e.target.files),
-    });
+    setFormData({ ...formData, images: Array.from(e.target.files) });
   };
 
   const handleLogoChange = (e) => {
+    setFormData({ ...formData, logo: e.target.files[0] });
+  };
+
+  /* ================= DESCRIPTION HANDLERS ================= */
+  const handleDescriptionChange = (index, value) => {
+    const updated = [...formData.description];
+    updated[index] = value;
+    setFormData({ ...formData, description: updated });
+  };
+
+  const addDescriptionPoint = () => {
     setFormData({
       ...formData,
-      logo: e.target.files[0],
+      description: [...formData.description, ""],
     });
   };
 
+  const removeDescriptionPoint = (index) => {
+    const updated = formData.description.filter((_, i) => i !== index);
+    setFormData({ ...formData, description: updated });
+  };
 
-  /* ================= SAVE PRODUCT ================= */
-  const handleSave = () => {
+  /* ================= VIDEO ================= */
+  const handleVideoChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setFormData({ ...formData, video: file });
+    setVideoPreview(URL.createObjectURL(file));
+  };
+
+  /* ================= SAVE PRODUCT (LOCAL UI) ================= */
+  const handleSave = async () => {
     if (!formData.title || !formData.category) return;
 
-    const imageUrls = formData.images.map((img) =>
-      URL.createObjectURL(img)
-    );
+    try {
+      const data = new FormData();
 
-    const logoUrl = formData.logo
-      ? URL.createObjectURL(formData.logo)
-      : "";
+      data.append("title", formData.title);
+      data.append("duration", formData.duration);
+      data.append("category", formData.category);
+      data.append("domain", formData.domain);
+      data.append("link", formData.link);
+      data.append("status", formData.status);
 
-    setProducts([
-      ...products,
-      {
-        ...formData,
-        logo: logoUrl,
-        images: imageUrls,
-      },
-    ]);
+      if (formData.logo) {
+        data.append("logo", formData.logo);
+      }
 
-    setFormData({
-      logo: null,
-      title: "",
-      duration: "",
-      category: "",
-      domain: "",
-      link: "",
-      description: "",
-      images: [],
-      video: "",
-      status: "live",
-    });
+      // description bullets
+      formData.description.forEach((point) => {
+        data.append("description", point);
+      });
 
-    setShowForm(false);
+      // multiple images
+      formData.images.forEach((img) => {
+        data.append("images", img);
+      });
+
+      // video
+      if (formData.video) {
+        data.append("video", formData.video);
+      }
+
+      await api.post("/products/", data, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      // ✅ re-fetch products from DB
+      const res = await api.get("/products/");
+      setProducts(res.data);
+
+      // reset form
+      setFormData({
+        logo: null,
+        title: "",
+        duration: "",
+        category: "",
+        domain: "",
+        link: "",
+        description: [""],
+        images: [],
+        video: null,
+        status: "live",
+      });
+
+      setVideoPreview(null);
+      setShowForm(false);
+
+    } catch (error) {
+      console.error("Product save failed:", error);
+    }
   };
+
+
+  /* ================= FETCH PRODUCTS ================= */
+  useEffect(() => {
+    api.get("/products/")
+      .then((res) => setProducts(res.data))
+      .catch((err) => console.error(err));
+  }, []);
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-10">
 
       {/* HEADER */}
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">
-          Our Products
-        </h2>
-
-        <button
+        <h2 className="text-2xl font-bold text-gray-900">Our Products</h2>
+        {/* <button
           onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg"
         >
           + Add Product
-        </button>
+        </button> */}
       </div>
 
       {/* ADD PRODUCT FORM */}
       {showForm && (
         <div className="bg-white rounded-2xl shadow p-6 mb-10">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Add New Product
-          </h3>
-
+          <h3 className="text-lg font-semibold mb-4">Add New Product</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
             <Input label="Product Name" name="title" value={formData.title} onChange={handleChange} />
@@ -147,18 +186,39 @@ const Products = () => {
             <Input label="Domain" name="domain" value={formData.domain} onChange={handleChange} />
             <Input label="Website Link" name="link" value={formData.link} onChange={handleChange} />
 
-            {/* DESCRIPTION (RESPONSIVE) */}
+            {/* DESCRIPTION BULLETS */}
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Description
-              </label>
-              <textarea
-                name="description"
-                rows="4"
-                value={formData.description}
-                onChange={handleChange}
-                className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              <label className="block text-sm font-medium mb-2">Description Points</label>
+
+              {formData.description.map((point, index) => (
+                <div key={index} className="flex gap-2 mb-2">
+                  <input
+                    value={point}
+                    onChange={(e) =>
+                      handleDescriptionChange(index, e.target.value)
+                    }
+                    placeholder={`Point ${index + 1}`}
+                    className="flex-1 border rounded px-3 py-2"
+                  />
+                  {formData.description.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeDescriptionPoint(index)}
+                      className="text-red-500"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={addDescriptionPoint}
+                className="text-blue-600 text-sm"
+              >
+                + Add point
+              </button>
             </div>
 
             {/* IMAGES (RESPONSIVE FILE INPUT) */}
@@ -189,13 +249,19 @@ const Products = () => {
               )}
             </div>
 
-            {/* VIDEO */}
-            <Input
-              label="Video Preview (YouTube URL)"
-              name="video"
-              value={formData.video}
-              onChange={handleChange}
-            />
+            {/* VIDEO UPLOAD */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-1">Video Upload</label>
+              <input type="file" accept="video/*" onChange={handleVideoChange} />
+
+              {videoPreview && (
+                <video
+                  src={videoPreview}
+                  controls
+                  className="mt-3 w-full h-56 rounded-lg object-cover"
+                />
+              )}
+            </div>
 
             {/* STATUS */}
             <div>
@@ -214,17 +280,12 @@ const Products = () => {
             </div>
           </div>
 
+          {/* Save */}
           <div className="flex gap-4 mt-6">
-            <button
-              onClick={handleSave}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-            >
+            <button onClick={handleSave} className="bg-blue-600 text-white px-4 py-2 rounded">
               Save Product
             </button>
-            <button
-              onClick={() => setShowForm(false)}
-              className="border px-5 py-2 rounded-lg hover:bg-gray-100"
-            >
+            <button onClick={() => setShowForm(false)} className="border px-4 py-2 rounded">
               Cancel
             </button>
           </div>
@@ -233,32 +294,29 @@ const Products = () => {
 
       {/* PRODUCTS GRID */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {products.map((product, index) => (
-          <ProjectCard key={index} {...product} />
+        {products.map((p, i) => (
+          <ProjectCard key={i} {...p} />
         ))}
       </div>
     </div>
   );
 };
 
-/* ================= INPUT COMPONENT ================= */
+/* ================= INPUT ================= */
 const Input = ({ label, name, value, onChange }) => (
   <div>
-    <label className="block text-sm font-medium text-gray-700 mb-1">
-      {label}
-    </label>
+    <label className="block text-sm font-medium mb-1">{label}</label>
     <input
-      type="text"
       name={name}
       value={value}
       onChange={onChange}
-      className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      className="w-full border rounded px-3 py-2"
     />
   </div>
 );
 
 /* ================= PROJECT CARD ================= */
-const ProjectCard = ({ logo, title, category, link, status }) => {
+const ProjectCard = ({ logo, title, category, domain, status, slug }) => {
   const navigate = useNavigate();
 
   const statusStyles = {
@@ -275,18 +333,23 @@ const ProjectCard = ({ logo, title, category, link, status }) => {
         {status === "live" ? "Live" : "Ongoing"}
       </span>
 
-      <img src={logo} alt={title} className="h-24 w-auto object-contain mb-4" />
+      <img src={`http://127.0.0.1:8000${logo}`} alt={title} className="h-24 w-auto object-contain mb-4" />
 
       <h3 className="text-lg font-semibold text-gray-800">
         {title}
       </h3>
-
-      <p className="text-sm text-gray-500 mb-4">
-        {category}
-      </p>
+      <div className="mt-1 mb-3">
+        <p className="text-sm text-gray-500 capitalize">
+          {category}
+        </p>
+        <p className="text-sm text-gray-500 capitalize">
+          {domain}
+        </p>
+      </div>
 
       <button
-        onClick={() => navigate(link)}
+        onClick={() => navigate(`/products/${slug}`)}
+
         className="text-blue-600 text-sm font-medium hover:underline"
       >
         View Project →
@@ -294,5 +357,7 @@ const ProjectCard = ({ logo, title, category, link, status }) => {
     </div>
   );
 };
+
+
 
 export default Products;

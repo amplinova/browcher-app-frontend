@@ -4,6 +4,7 @@ import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 import Layout from "./components/Layout";
 import Restaurant from "./pages/OurProducts/Restaurant";
+import Amplinova from "./pages/OurClients/Amplinova";
 import Clients from "./pages/Clients";
 import Products from "./pages/Products";
 import Login from "./components/Login";
@@ -24,6 +25,9 @@ function App() {
               <Route path="/Clients" element={<Clients />} />
               <Route path="/Products" element={<Products />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/products/:slug" element={<Restaurant />} />
+              <Route path="/clients/:slug" element={<Amplinova />} />
+
             </Routes>
           </main>
         </div>
