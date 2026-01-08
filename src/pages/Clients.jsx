@@ -354,7 +354,7 @@ const ProjectCard = ({ logo, title, category, domain, status,slug }) => {
         {status === "live" ? "Live" : "Ongoing"}
       </span>
 
-      <img src={`http://127.0.0.1:8000${logo}`} alt={title} className="h-24 w-auto object-contain mb-4" />
+      <img src={`https://browcherbackend.amplinova.com${logo}`} alt={title} className="h-24 w-auto object-contain mb-4" />
 
       <h3 className="text-lg font-semibold text-gray-800">
         {title}

@@ -45,7 +45,7 @@ const Amplinova = () => {
       {/* TITLE & LOGO */}
       <div className="flex items-center gap-6">
         <img
-          src={`http://127.0.0.1:8000${logo}`}
+          src={`https://browcherbackend.amplinova.com${logo}`}
           alt={title}
           className="w-24 h-24 rounded-xl object-contain"
         />
@@ -99,7 +99,7 @@ const Amplinova = () => {
 
         <div className="relative max-w-4xl mx-auto">
           <img
-            src={`http://127.0.0.1:8000${images[current]}`}
+            src={`https://browcherbackend.amplinova.com${images[current]}`}
             alt={`Screenshot ${current + 1}`}
             className="rounded-xl shadow-lg w-full transition-all duration-500"
           />
@@ -146,7 +146,7 @@ const Amplinova = () => {
         <div className="aspect-video rounded-xl overflow-hidden max-w-3xl mx-auto bg-black">
           <video className="w-full h-full object-cover" controls>
             <source
-              src={`http://127.0.0.1:8000${video.src}`}
+              src={`https://browcherbackend.amplinova.com${video.src}`}
               type={video.type}
             />
             Your browser does not support the video tag.
